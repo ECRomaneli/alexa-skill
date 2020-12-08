@@ -1,0 +1,39 @@
+{
+  "name": "true-skill",
+  "version": "0.0.1",
+  "description": "Skills for Alexa in a Nutshell",
+  "main": "dist/module/trueskill",
+  "typings": "dist/module/trueskill",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "sh build.sh",
+    "test": "node test/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ECRomaneli/true-skill"
+  },
+  "keywords": [
+    "true-skill",
+    "true-skills",
+    "true-alexa",
+    "alexa",
+    "automation",
+    "tsframework",
+    "ts",
+    "nutshell",
+    "lightweight"
+  ],
+  "author": "Emerson Capuchi Romaneli <emerson.romaneli@gmail.com> (http://emersoncr.com.br/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ECRomaneli/true-skill/issues"
+  },
+  "homepage": "https://github.com/ECRomaneli/true-skill#readme",
+  "devDependencies": {
+    "typescript": "^4.1.2",
+    "uglify-js": "^3.12.1"
+  }
+}
