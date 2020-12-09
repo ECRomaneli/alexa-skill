@@ -1,94 +1,128 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.t$ = exports.TrueSkill = exports.Skill = void 0;
-// export function t$(onReady: Function): Skill;
-exports.Skill = t$.Class;
-exports.TrueSkill = t$.Class;
-var t$;
-(function (t$) {
-    // mQuery constants
-    t$.APP_NAME = 'True Skill Framework';
-    const HANDLERS = [];
-    /**
-     * TrueSkill Core.
-     */
-    class TrueSkill {
-        static on(intentName, handler) {
-            return TrueSkill;
-        }
-        /**
-         * Merge the contents of an object onto the mQuery prototype to provide new mQuery instance methods.
-         * @param obj An object to merge onto the jQuery prototype.
-         */
-        extend(obj) {
-            each(obj, (key, value) => { t$.fn[key] = value; });
-        }
-    }
-    t$.TrueSkill = TrueSkill;
-    t$.Class = TrueSkill;
-    t$.fn = TrueSkill.prototype;
-    t$.prototype = t$.fn;
-    /* *** ============================  Utils  ============================ *** */
-    /**
-     * Verify if parameter is set (comparing with undefined).
-     * NOTE: [], 0 and "" will return true.
-     */
-    function isSet(param) {
-        return !(param === void 0 || param === null);
-    }
-    /**
-     * Verify if array-like object is empty
-     */
-    function isEmpty(arr) {
-        return !arr || !arr.length;
-    }
-    /**
-     * A generic iterator function, which can be used to seamlessly iterate over both objects and arrays.
-     * @param arr The array or array-like object to iterate over.
-     * @param it The function that will be executed on every value.
-     */
-    function each(arr, it) {
-        if (isArrayLike(arr)) {
-            let length = arr.length;
-            for (let i = 0; i < length; i++) {
-                if (it.call(arr[i], i, arr[i]) === false) {
-                    break;
+exports.Skill = void 0;
+const AskCore = require("ask-sdk-core");
+function Skill(skillDefinition) {
+    skillDefinition(TrueSkill.Core);
+    let builder = AskCore.SkillBuilders.custom();
+    builder.addRequestHandlers.apply(builder, TrueSkill.handlers);
+    builder.withCustomUserAgent('trueskill/app').lambda();
+}
+exports.Skill = Skill;
+var TrueSkill;
+(function (TrueSkill) {
+    TrueSkill.handlers = [];
+    class Core {
+        static on(_intentName, options, handler) {
+            if (arguments.length < 3) {
+                handler = options;
+                options = {};
+            }
+            let context;
+            let alexa;
+            TrueSkill.handlers.push({
+                canHandle: (handlerInput) => {
+                    context = new Context(handlerInput);
+                    alexa = new Alexa(handlerInput);
+                    handler(context, alexa);
+                    return context.isDone();
+                },
+                handle: (handlerInput) => {
+                    alexa = new Alexa(handlerInput);
+                    (context.getHandler())(alexa);
+                    return alexa.getResponse();
                 }
+            });
+        }
+    }
+    TrueSkill.Core = Core;
+    class InputWrapper {
+        constructor(handlerInput) { this.handlerInput = handlerInput; }
+    }
+    class Alexa extends InputWrapper {
+        constructor() {
+            super(...arguments);
+            this.responseBuilder = this.handlerInput.responseBuilder;
+        }
+        say(speechOutput) {
+            this.responseBuilder.speak(speechOutput);
+            return this;
+        }
+        ask(repromptSpeechOutput) {
+            this.responseBuilder.reprompt(repromptSpeechOutput);
+            return this;
+        }
+        getResponse() {
+            return this.responseBuilder.getResponse();
+        }
+    }
+    class Context extends InputWrapper {
+        constructor() {
+            super(...arguments);
+            this.eligibility = false;
+            this.invert = false;
+        }
+        isEligible() {
+            return this.isDone() || !this.invert === this.eligibility;
+        }
+        isDone() {
+            return this.handler !== void 0;
+        }
+        getHandler() {
+            return this.handler;
+        }
+        not() {
+            this.invert = true;
+            return this;
+        }
+        hasSlot(...slotNames) {
+            if (slotNames.length === 0) {
+                this.eligibility = this.getSlots() != void 0;
+                return this;
+            }
+            this.eligibility = !slotNames.some((slotName) => this.getSlot(slotName) === void 0);
+            return this;
+        }
+        when(condition) {
+            this.eligibility = condition();
+            return this;
+        }
+        do(handler) {
+            if (!this.isDone() && this.isEligible()) {
+                this.handler = handler;
             }
         }
-        else {
-            for (let key in arr) {
-                if (it.call(arr[key], key, arr[key]) === false) {
-                    break;
-                }
+        slot(slotName) {
+            let slot = this.getSlot(slotName);
+            if (slot === void 0 || slot.value === void 0) {
+                return "";
             }
+            return slot.value;
         }
-        return arr;
+        getRequestEnvelope() {
+            return this.handlerInput.requestEnvelope;
+        }
+        getRequest() {
+            return this.getRequestEnvelope().request;
+        }
+        getIntent() {
+            return this.getRequest().intent;
+        }
+        getSlots() {
+            return this.getIntent().slots;
+        }
+        getSlot(slotName) {
+            let slots = this.getSlots();
+            if (slots === void 0) {
+                return void 0;
+            }
+            return slots[slotName];
+        }
+        getRequestType() {
+            return AskCore.getRequestType(this.getRequestEnvelope());
+        }
+        getIntentName() {
+            return AskCore.getIntentName(this.getRequestEnvelope());
+        }
     }
-    t$.each = each;
-    /**
-     * Verify if object is array-like.
-     * @param obj Object to be verified.
-     */
-    function isArrayLike(obj) {
-        if (typeOf(obj, 'array')) {
-            return true;
-        }
-        if (!obj || typeOf(obj, ['function', 'string', 'window'])) {
-            return false;
-        }
-        let length = obj.length;
-        return typeof length === "number" && (length === 0 || (length > 0 && (length - 1) in obj));
-    }
-    t$.isArrayLike = isArrayLike;
-    /**
-     * Verify the type of object passed and compare.
-     */
-    function typeOf(obj, types) {
-        let match = (typeof obj).toLowerCase(), some = (type) => match === type;
-        if (Array.isArray(types)) {
-            return types.some(some);
-        }
-        return some(types);
-    }
-})(t$ = exports.t$ || (exports.t$ = {}));
+})(TrueSkill || (TrueSkill = {}));

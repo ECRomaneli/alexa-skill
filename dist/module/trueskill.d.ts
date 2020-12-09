@@ -1,44 +1,125 @@
-export declare type Skill = t$.Class;
-export declare type TrueSkill = t$.Class;
-export declare const Skill: typeof t$.TrueSkill;
-export declare const TrueSkill: typeof t$.TrueSkill;
-export declare namespace t$ {
-    type SkillHandler = {
-        canHandler: () => boolean;
-        handler: () => Response | Promise<Response>;
+export declare type TrueSkill = ($: typeof TrueSkill.Core) => void;
+import AskCore = require('ask-sdk-core');
+import { Intent, Request, RequestEnvelope, Response, Slot } from 'ask-sdk-model';
+export declare function Skill(skillDefinition: TrueSkill): void;
+declare namespace TrueSkill {
+    type Condition = () => boolean;
+    type IntentHandler = (context?: Context, alexa?: Alexa) => void;
+    type ResponseHandler = (alexa?: Alexa) => void;
+    type Map<K> = {
+        [key: string]: K;
     };
-    type SkillTree = ArrayLike<SkillTree | SkillHandler>;
-    type Class = TrueSkill;
-    type ForEachIterator<T> = (keyOrIndex: any, value: T) => boolean | void;
-    type ArrayLikeObject = PlainObject | ArrayLike<any>;
-    type PlainObject = {
-        [key: string]: any;
-        length?: number;
-    };
-    const APP_NAME = "True Skill Framework";
-    /**
-     * TrueSkill Core.
-     */
-    class TrueSkill {
-        static on(intentName: string, handler: Function): typeof TrueSkill;
-        /**
-         * Merge the contents of an object onto the mQuery prototype to provide new mQuery instance methods.
-         * @param obj An object to merge onto the jQuery prototype.
-         */
-        extend(obj: Object): void;
+    const handlers: AskCore.RequestHandler[] = [];
+    interface PersistenceAdapter {
     }
-    const Class: typeof TrueSkill;
-    const fn: TrueSkill;
-    const prototype: TrueSkill;
-    /**
-     * A generic iterator function, which can be used to seamlessly iterate over both objects and arrays.
-     * @param arr The array or array-like object to iterate over.
-     * @param it The function that will be executed on every value.
-     */
-    function each(arr: ArrayLikeObject, it: ForEachIterator<any>): ArrayLikeObject;
-    /**
-     * Verify if object is array-like.
-     * @param obj Object to be verified.
-     */
-    function isArrayLike(obj: any): boolean;
+    class Core {
+        static on(intentName: string, handler: IntentHandler): void;
+        static on(_intentName: string, options: IntentHandler | Object, handler?: IntentHandler): void {
+            if (arguments.length < 3) {
+                handler = <IntentHandler>options;
+                options = {};
+            }
+            let context: Context;
+            let alexa: Alexa;
+            handlers.push({
+                canHandle: (handlerInput) => {
+                    context = new Context(handlerInput);
+                    alexa = new Alexa(handlerInput);
+                    handler(context, alexa);
+                    return context.isDone();
+                },
+                handle: (handlerInput) => {
+                    alexa = new Alexa(handlerInput);
+                    (context.getHandler())(alexa);
+                    return alexa.getResponse();
+                }
+            });
+        }
+    }
+    class InputWrapper {
+        protected handlerInput: AskCore.HandlerInput;
+        constructor(handlerInput: AskCore.HandlerInput) { this.handlerInput = handlerInput; }
+    }
+    class Alexa extends InputWrapper {
+        private responseBuilder: AskCore.ResponseBuilder = this.handlerInput.responseBuilder;
+        public say(speechOutput: string): this {
+            this.responseBuilder.speak(speechOutput);
+            return this;
+        }
+        public ask(repromptSpeechOutput: string): this {
+            this.responseBuilder.reprompt(repromptSpeechOutput);
+            return this;
+        }
+        public getResponse(): Response {
+            return this.responseBuilder.getResponse();
+        }
+    }
+    class Context extends InputWrapper {
+        private eligibility: boolean = false;
+        private invert: boolean = false;
+        private handler: ResponseHandler;
+        private isEligible(): boolean {
+            return this.isDone() || !this.invert === this.eligibility;
+        }
+        public isDone(): boolean {
+            return this.handler !== void 0;
+        }
+        public getHandler(): ResponseHandler {
+            return this.handler;
+        }
+        public not(): this {
+            this.invert = true;
+            return this;
+        }
+        public hasSlot(...slotNames: string[]): this {
+            if (slotNames.length === 0) {
+                this.eligibility = this.getSlots() != void 0;
+                return this;
+            }
+            this.eligibility = !slotNames.some((slotName) => this.getSlot(slotName) === void 0);
+            return this;
+        }
+        public when(condition: Condition): this {
+            this.eligibility = condition();
+            return this;
+        }
+        public do(handler: ResponseHandler): void {
+            if (!this.isDone() && this.isEligible()) {
+                this.handler = handler;
+            }
+        }
+        public slot(slotName: string): string {
+            let slot: Slot = this.getSlot(slotName);
+            if (slot === void 0 || slot.value === void 0) {
+                return "";
+            }
+            return slot.value;
+        }
+        public getRequestEnvelope(): RequestEnvelope {
+            return this.handlerInput.requestEnvelope;
+        }
+        public getRequest(): Request {
+            return this.getRequestEnvelope().request;
+        }
+        public getIntent(): Intent {
+            return (<canfulfill.CanFulfillIntentRequest>this.getRequest()).intent;
+        }
+        public getSlots(): Map<Slot> | void {
+            return this.getIntent().slots;
+        }
+        public getSlot(slotName: string): Slot {
+            let slots = this.getSlots();
+            if (slots === void 0) {
+                return void 0;
+            }
+            return slots[slotName];
+        }
+        public getRequestType(): string {
+            return AskCore.getRequestType(this.getRequestEnvelope());
+        }
+        public getIntentName(): string {
+            return AskCore.getIntentName(this.getRequestEnvelope());
+        }
+    }
 }
+export {};
