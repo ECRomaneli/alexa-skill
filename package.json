@@ -1,6 +1,6 @@
 {
   "name": "@ecromaneli/true-skill",
-  "version": "0.0.3",
+  "version": "0.1.2",
   "description": "Skills for Alexa in a Nutshell",
   "main": "dist/module/trueskill",
   "typings": "dist/module/trueskill",
@@ -37,7 +37,6 @@
     "uglify-js": "^3.12.1",
     "ask-sdk-core": "^2.7.0",
     "ask-sdk-model": "^1.19.0",
-    "aws-sdk": "^2.326.0",
     "@types/node": "^14.14.10"
   }
 }

@@ -1,50 +1,57 @@
 export type TrueSkill = ($: typeof TrueSkill.Core) => void;
 
 import AskCore = require('ask-sdk-core');
-import { canfulfill, Intent, Request, RequestEnvelope, Response, Slot } from 'ask-sdk-model';
+import { Intent, Request, RequestEnvelope, Response, Slot } from 'ask-sdk-model';
 
-export function Skill(skillDefinition: TrueSkill): void {
-    skillDefinition(TrueSkill.Core);
-    
-    let builder: AskCore.CustomSkillBuilder = AskCore.SkillBuilders.custom();
+export function Skill(skillHandler: TrueSkill, builder: AskCore.CustomSkillBuilder = AskCore.SkillBuilders.custom()): AskCore.LambdaHandler {
+    skillHandler.call(TrueSkill.Core, TrueSkill.Core);
     builder.addRequestHandlers.apply(builder, TrueSkill.handlers);
-    builder.withCustomUserAgent('trueskill/app').lambda();
+    return builder.withCustomUserAgent('trueskill/app').lambda();
 }
 
 namespace TrueSkill {
     type Condition = () => boolean;
+    type Map<K> = { [key: string]: K; };
+    type Selector = { requestType: string, intentName?: string };
+
     type IntentHandler = (context?: Context, alexa?: Alexa) => void;
     type ResponseHandler = (alexa?: Alexa) => void;
-    type Map<K> = { [key: string]: K; }
+    
 
     export const handlers: AskCore.RequestHandler[] = [];
 
-    export interface PersistenceAdapter {  }
+    export interface PersistenceAdapter {}
 
     export class Core {
-        static on(intentName: string, handler: IntentHandler): void;
-        static on(_intentName: string, options: IntentHandler | Object, handler?: IntentHandler): void {
+        static launch(handler: IntentHandler): void {
+            this.on(RequestType.LaunchRequest.get(), handler);
+        }
+
+        static on(selector: string | Selector, handler: IntentHandler): void;
+        static on(selector: string | Selector, options: IntentHandler | Object, handler?: IntentHandler): void {
             if (arguments.length < 3) {
                 handler = <IntentHandler> options;
                 options = {};
             }
 
             let context: Context;
-            let alexa: Alexa;
-
+  
             handlers.push({
                 canHandle: (handlerInput) => {
                     context = new Context(handlerInput);
-                    alexa = new Alexa(handlerInput);
 
-                    
+                    let s: Selector = RequestType.parseSelector(selector);
+                    if (s.requestType !== context.getRequestType()
+                    || (s.intentName !== void 0 && s.intentName !== context.getIntentName())) {
+                        return false;
+                    }
 
-                    handler(context, alexa);
+                    handler.call(context, context);
                     return context.isDone();
                 },
                 handle: (handlerInput) => {
-                    alexa = new Alexa(handlerInput);
-                    (context.getHandler())(alexa);
+                    let alexa: Alexa = new Alexa(handlerInput);
+                    context.getHandler().call(alexa, alexa);
                     return alexa.getResponse();
                 }
             });
@@ -54,18 +61,55 @@ namespace TrueSkill {
     class InputWrapper {
         protected handlerInput: AskCore.HandlerInput;
         constructor (handlerInput: AskCore.HandlerInput) { this.handlerInput = handlerInput; }
+
+        public slot(slotName: string): string {
+            let slot: Slot = this.getSlot(slotName);
+            if (slot === void 0 || slot.value === void 0) { return ""; }
+            return slot.value;
+        }
+
+        public getRequestEnvelope(): RequestEnvelope {
+            return this.handlerInput.requestEnvelope;
+        }
+
+        public getRequest(): Request {
+            return this.getRequestEnvelope().request;
+        }
+
+        public getIntent(): Intent {
+            return  (<any> this.getRequest()).intent;
+        }
+
+        public getSlots(): Map<Slot> | void {
+            return this.getIntent().slots;
+        }
+
+        public getSlot(slotName: string): Slot {
+            let slots = this.getSlots();
+            if (slots === void 0) { return void 0; }
+            return slots[slotName];
+        }
+
+        public fulfillString(str: string): string {
+            return str.replace(/{{([^}]+)}}/g, (_match, group) => this.slot(group));
+        }
     }
 
     class Alexa extends InputWrapper {
         private responseBuilder: AskCore.ResponseBuilder = this.handlerInput.responseBuilder;
 
-        public say(speechOutput: string): this {
-            this.responseBuilder.speak(speechOutput);
+        public say(speechOutput: string, fulfillString: boolean = true): this {
+            if (fulfillString) { speechOutput = this.fulfillString(speechOutput); }
+            this.responseBuilder.speak(this.fulfillString(speechOutput));
             return this;
         }
 
-        public ask(repromptSpeechOutput: string): this {
-            this.responseBuilder.reprompt(repromptSpeechOutput);
+        public ask(speechOutput: string, repromptSpeechOutput: string = speechOutput, fulfillString: boolean = true): this {
+            if (fulfillString) {
+                speechOutput = this.fulfillString(speechOutput);
+                repromptSpeechOutput = this.fulfillString(repromptSpeechOutput);
+            }
+            this.responseBuilder.speak(speechOutput).reprompt(repromptSpeechOutput);
             return this;
         }
 
@@ -92,11 +136,15 @@ namespace TrueSkill {
         }
 
         public not() : this {
-            this.invert = true;
+            if (this.isDone()) { return this; }
+
+            this.invert = !this.invert;
             return this;
         }
 
         public hasSlot(...slotNames: string[]): this {
+            if (this.isDone()) { return this; }
+
             if (slotNames.length === 0) {
                 this.eligibility = this.getSlots() != void 0;
                 return this;
@@ -108,6 +156,8 @@ namespace TrueSkill {
         
 
         public when(condition: Condition): this {
+            if (this.isDone()) { return this; }
+
             this.eligibility = condition();
             return this;
         }
@@ -116,32 +166,8 @@ namespace TrueSkill {
             if (!this.isDone() && this.isEligible()) { this.handler = handler; }
         }
 
-        public slot(slotName: string): string {
-            let slot: Slot = this.getSlot(slotName);
-            if (slot === void 0 || slot.value === void 0) { return ""; }
-            return slot.value;
-        }
-
-        public getRequestEnvelope(): RequestEnvelope {
-            return this.handlerInput.requestEnvelope;
-        }
-
-        public getRequest(): Request {
-            return this.getRequestEnvelope().request;
-        }
-
-        public getIntent(): Intent {
-            return  (<canfulfill.CanFulfillIntentRequest> this.getRequest()).intent;
-        }
-
-        public getSlots(): Map<Slot> | void {
-            return this.getIntent().slots;
-        }
-
-        public getSlot(slotName: string): Slot {
-            let slots = this.getSlots();
-            if (slots === void 0) { return void 0; }
-            return slots[slotName];
+        public default(handler: ResponseHandler): void {
+            this.handler = handler;
         }
 
         public getRequestType(): string {
@@ -150,6 +176,44 @@ namespace TrueSkill {
 
         public getIntentName(): string {
             return AskCore.getIntentName(this.getRequestEnvelope());
+        }
+    }
+
+    class RequestType {
+
+        private static AllValues: { [name: string] : RequestType } = {};
+    
+        static readonly LaunchRequest = new RequestType(1, "LaunchRequest");
+        static readonly IntentRequest = new RequestType(2, "IntentRequest");
+    
+        private constructor (public readonly id: number, public readonly value: string) {
+            RequestType.AllValues[value] = this;
+        }
+    
+        public static parseEnum(data: string): RequestType {
+            return RequestType.AllValues[data.trim()];
+        }
+
+        public static parseSelector(rawSelector: Selector | string): Selector {
+            if (typeof rawSelector !== 'string') { return rawSelector; }
+
+            let splitted = rawSelector.replace(/\s/g, '').split(':');
+
+            if (splitted.length == 1) {
+                return {
+                    requestType: RequestType.IntentRequest.value,
+                    intentName: splitted[0]
+                };
+            }
+
+            return {
+                requestType: splitted[1],
+                intentName: splitted[0].length ? splitted[0] : void 0
+            };
+        }
+
+        public get(intentName?: string): Selector {
+            return { requestType: this.value, intentName };
         }
     }
 }
