@@ -15,8 +15,7 @@ namespace TrueSkill {
     type Selector = { requestType: string, intentName?: string };
 
     type IntentHandler = (context?: Context, alexa?: Alexa) => void;
-    type ResponseHandler = (alexa?: Alexa) => void;
-    
+    type RequestHandler = (alexa: Alexa, data?: Data) => void;
 
     export const handlers: AskCore.RequestHandler[] = [];
 
@@ -50,22 +49,24 @@ namespace TrueSkill {
                     return context.isDone();
                 },
                 handle: (handlerInput) => {
-                    let alexa: Alexa = new Alexa(handlerInput);
-                    context.getHandler().call(alexa, alexa);
+                    let data: Data = new Data(handlerInput);
+                    let alexa: Alexa = new Alexa(handlerInput, data);
+                    context.getHandler().call(alexa, alexa, data);
                     return alexa.getResponse();
                 }
             });
         }
     }
 
-    class InputWrapper {
+    abstract class InputWrapper {
         protected handlerInput: AskCore.HandlerInput;
-        constructor (handlerInput: AskCore.HandlerInput) { this.handlerInput = handlerInput; }
 
-        public slot(slotName: string): string {
-            let slot: Slot = this.getSlot(slotName);
-            if (slot === void 0 || slot.value === void 0) { return ""; }
-            return slot.value;
+        constructor (handlerInput: AskCore.HandlerInput) {
+            this.handlerInput = handlerInput;
+        }
+
+        public getAttributesManager(): AskCore.AttributesManager {
+            return this.handlerInput.attributesManager;
         }
 
         public getRequestEnvelope(): RequestEnvelope {
@@ -79,15 +80,63 @@ namespace TrueSkill {
         public getIntent(): Intent {
             return  (<any> this.getRequest()).intent;
         }
+    }
 
-        public getSlots(): Map<Slot> | void {
-            return this.getIntent().slots;
+    class Data extends InputWrapper {
+        public slot(slotName: string): string {
+            return this.getSlot(slotName, {value: ""}).value;
         }
 
-        public getSlot(slotName: string): Slot {
-            let slots = this.getSlots();
-            if (slots === void 0) { return void 0; }
-            return slots[slotName];
+        public sessionAttr(attrName: string, value: any): this;
+        public sessionAttr(attrName: string, value?: any): any {
+            if (value !== void 0) { 
+                this.setSessionAttr(attrName, value);
+                return this;
+            }
+            return this.getSessionAttr(attrName, "");
+        }
+
+        public getSlots(safeReturn: boolean = true): Map<Slot> {
+            let slots = this.getIntent().slots;
+            return slots || (safeReturn ? {} : void 0);
+        }
+
+        public hasSlot(slotName: string): boolean {
+            let slots: Map<Slot> = this.getSlots();
+            let slot = slots[slotName];
+            // When slot is not recognized, '?' is returned
+            return slot !== void 0 && slot.value !== '?';
+        }
+
+        public getSlot(slotName: string, defaultValue?: any): Slot {
+            return this.hasSlot(slotName) ? 
+                this.getSlots()[slotName] : 
+                defaultValue;
+        }
+
+        public getSessionAttrs(safeReturn: boolean = true): Object {
+            return this.getAttributesManager().getSessionAttributes() || (safeReturn ? {} : void 0);
+        }
+
+        public hasSessionAttr(attrName: string): boolean {
+            return this.getSessionAttrs().hasOwnProperty(attrName);
+        }
+
+        public getSessionAttr(attrName: string, defaultValue?: any) {
+            return this.hasSessionAttr(attrName) ? 
+                this.getSessionAttrs()[attrName] : 
+                defaultValue;
+        }
+
+        public setSessionAttr(attrName: string, value: any): this {
+            let attrs: Map<any> = {};
+            attrs[attrName] = value;
+            return this.setSessionAttrs(attrs);
+        }
+
+        public setSessionAttrs(sessionAttrs: Map<any>): this {
+            this.getAttributesManager().setSessionAttributes(sessionAttrs);
+            return this;
         }
 
         public fulfillString(str: string): string {
@@ -95,33 +144,11 @@ namespace TrueSkill {
         }
     }
 
-    class Alexa extends InputWrapper {
-        private responseBuilder: AskCore.ResponseBuilder = this.handlerInput.responseBuilder;
-
-        public say(speechOutput: string, fulfillString: boolean = true): this {
-            if (fulfillString) { speechOutput = this.fulfillString(speechOutput); }
-            this.responseBuilder.speak(this.fulfillString(speechOutput));
-            return this;
-        }
-
-        public ask(speechOutput: string, repromptSpeechOutput: string = speechOutput, fulfillString: boolean = true): this {
-            if (fulfillString) {
-                speechOutput = this.fulfillString(speechOutput);
-                repromptSpeechOutput = this.fulfillString(repromptSpeechOutput);
-            }
-            this.responseBuilder.speak(speechOutput).reprompt(repromptSpeechOutput);
-            return this;
-        }
-
-        public getResponse(): Response {
-            return this.responseBuilder.getResponse();
-        }
-    }
-
     class Context extends InputWrapper {
+        private data: Data = new Data(this.handlerInput);
         private eligibility: boolean = false;
         private invert: boolean = false;
-        private handler: ResponseHandler;
+        private handler: RequestHandler;
 
         private isEligible(): boolean {
             return this.isDone() || !this.invert === this.eligibility;
@@ -131,7 +158,7 @@ namespace TrueSkill {
             return this.handler !== void 0;
         }
 
-        public getHandler(): ResponseHandler {
+        public getHandler(): RequestHandler {
             return this.handler;
         }
 
@@ -146,11 +173,23 @@ namespace TrueSkill {
             if (this.isDone()) { return this; }
 
             if (slotNames.length === 0) {
-                this.eligibility = this.getSlots() != void 0;
+                this.eligibility = this.data.getSlots(false) !== void 0;
                 return this;
             }
 
-            this.eligibility = !slotNames.some((slotName) => this.getSlot(slotName) === void 0);
+            this.eligibility = !slotNames.some((slotName) => !this.data.hasSlot(slotName));
+            return this;
+        }
+
+        public hasSessionAttr(...attrNames: string[]): this {
+            if (this.isDone()) { return this; }
+
+            if (attrNames.length === 0) {
+                this.eligibility = this.data.getSlots(false) !== void 0;
+                return this;
+            }
+
+            this.eligibility = !attrNames.some((attrName) => !this.data.hasSessionAttr(attrName));
             return this;
         }
         
@@ -162,11 +201,11 @@ namespace TrueSkill {
             return this;
         }
 
-        public do(handler: ResponseHandler): void {
+        public do(handler: RequestHandler): void {
             if (!this.isDone() && this.isEligible()) { this.handler = handler; }
         }
 
-        public default(handler: ResponseHandler): void {
+        public default(handler: RequestHandler): void {
             this.handler = handler;
         }
 
@@ -179,8 +218,36 @@ namespace TrueSkill {
         }
     }
 
-    class RequestType {
+    class Alexa extends InputWrapper {
+        private responseBuilder: AskCore.ResponseBuilder = this.handlerInput.responseBuilder;
+        private data: Data;
 
+        constructor (handlerInput: AskCore.HandlerInput, data: Data = new Data(handlerInput)) {
+            super(handlerInput);
+            this.data = data;
+        }
+
+        public say(speechOutput: string, fulfillString: boolean = true): this {
+            if (fulfillString) { speechOutput = this.data.fulfillString(speechOutput); }
+            this.responseBuilder.speak(this.data.fulfillString(speechOutput));
+            return this;
+        }
+
+        public ask(speechOutput: string, repromptSpeechOutput: string = speechOutput, fulfillString: boolean = true): this {
+            if (fulfillString) {
+                speechOutput = this.data.fulfillString(speechOutput);
+                repromptSpeechOutput = this.data.fulfillString(repromptSpeechOutput);
+            }
+            this.responseBuilder.speak(speechOutput).reprompt(repromptSpeechOutput);
+            return this;
+        }
+
+        public getResponse(): Response {
+            return this.responseBuilder.getResponse();
+        }
+    }
+
+    class RequestType {
         private static AllValues: { [name: string] : RequestType } = {};
     
         static readonly LaunchRequest = new RequestType(1, "LaunchRequest");

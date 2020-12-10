@@ -33,8 +33,9 @@ var TrueSkill;
                     return context.isDone();
                 },
                 handle: (handlerInput) => {
-                    let alexa = new Alexa(handlerInput);
-                    context.getHandler().call(alexa, alexa);
+                    let data = new Data(handlerInput);
+                    let alexa = new Alexa(handlerInput, data);
+                    context.getHandler().call(alexa, alexa, data);
                     return alexa.getResponse();
                 }
             });
@@ -42,13 +43,11 @@ var TrueSkill;
     }
     TrueSkill.Core = Core;
     class InputWrapper {
-        constructor(handlerInput) { this.handlerInput = handlerInput; }
-        slot(slotName) {
-            let slot = this.getSlot(slotName);
-            if (slot === void 0 || slot.value === void 0) {
-                return "";
-            }
-            return slot.value;
+        constructor(handlerInput) {
+            this.handlerInput = handlerInput;
+        }
+        getAttributesManager() {
+            return this.handlerInput.attributesManager;
         }
         getRequestEnvelope() {
             return this.handlerInput.requestEnvelope;
@@ -59,47 +58,61 @@ var TrueSkill;
         getIntent() {
             return this.getRequest().intent;
         }
-        getSlots() {
-            return this.getIntent().slots;
+    }
+    class Data extends InputWrapper {
+        slot(slotName) {
+            return this.getSlot(slotName, { value: "" }).value;
         }
-        getSlot(slotName) {
-            let slots = this.getSlots();
-            if (slots === void 0) {
-                return void 0;
+        sessionAttr(attrName, value) {
+            if (value !== void 0) {
+                this.setSessionAttr(attrName, value);
+                return this;
             }
-            return slots[slotName];
+            return this.getSessionAttr(attrName, "");
+        }
+        getSlots(safeReturn = true) {
+            let slots = this.getIntent().slots;
+            return slots || (safeReturn ? {} : void 0);
+        }
+        hasSlot(slotName) {
+            let slots = this.getSlots();
+            let slot = slots[slotName];
+            // When slot is not recognized, '?' is returned
+            return slot !== void 0 && slot.value !== '?';
+        }
+        getSlot(slotName, defaultValue) {
+            return this.hasSlot(slotName) ?
+                this.getSlots()[slotName] :
+                defaultValue;
+        }
+        getSessionAttrs(safeReturn = true) {
+            return this.getAttributesManager().getSessionAttributes() || (safeReturn ? {} : void 0);
+        }
+        hasSessionAttr(attrName) {
+            return this.getSessionAttrs().hasOwnProperty(attrName);
+        }
+        getSessionAttr(attrName, defaultValue) {
+            return this.hasSessionAttr(attrName) ?
+                this.getSessionAttrs()[attrName] :
+                defaultValue;
+        }
+        setSessionAttr(attrName, value) {
+            let attrs = {};
+            attrs[attrName] = value;
+            return this.setSessionAttrs(attrs);
+        }
+        setSessionAttrs(sessionAttrs) {
+            this.getAttributesManager().setSessionAttributes(sessionAttrs);
+            return this;
         }
         fulfillString(str) {
             return str.replace(/{{([^}]+)}}/g, (_match, group) => this.slot(group));
         }
     }
-    class Alexa extends InputWrapper {
-        constructor() {
-            super(...arguments);
-            this.responseBuilder = this.handlerInput.responseBuilder;
-        }
-        say(speechOutput, fulfillString = true) {
-            if (fulfillString) {
-                speechOutput = this.fulfillString(speechOutput);
-            }
-            this.responseBuilder.speak(this.fulfillString(speechOutput));
-            return this;
-        }
-        ask(speechOutput, repromptSpeechOutput = speechOutput, fulfillString = true) {
-            if (fulfillString) {
-                speechOutput = this.fulfillString(speechOutput);
-                repromptSpeechOutput = this.fulfillString(repromptSpeechOutput);
-            }
-            this.responseBuilder.speak(speechOutput).reprompt(repromptSpeechOutput);
-            return this;
-        }
-        getResponse() {
-            return this.responseBuilder.getResponse();
-        }
-    }
     class Context extends InputWrapper {
         constructor() {
             super(...arguments);
+            this.data = new Data(this.handlerInput);
             this.eligibility = false;
             this.invert = false;
         }
@@ -124,10 +137,21 @@ var TrueSkill;
                 return this;
             }
             if (slotNames.length === 0) {
-                this.eligibility = this.getSlots() != void 0;
+                this.eligibility = this.data.getSlots(false) !== void 0;
                 return this;
             }
-            this.eligibility = !slotNames.some((slotName) => this.getSlot(slotName) === void 0);
+            this.eligibility = !slotNames.some((slotName) => !this.data.hasSlot(slotName));
+            return this;
+        }
+        hasSessionAttr(...attrNames) {
+            if (this.isDone()) {
+                return this;
+            }
+            if (attrNames.length === 0) {
+                this.eligibility = this.data.getSlots(false) !== void 0;
+                return this;
+            }
+            this.eligibility = !attrNames.some((attrName) => !this.data.hasSessionAttr(attrName));
             return this;
         }
         when(condition) {
@@ -150,6 +174,31 @@ var TrueSkill;
         }
         getIntentName() {
             return AskCore.getIntentName(this.getRequestEnvelope());
+        }
+    }
+    class Alexa extends InputWrapper {
+        constructor(handlerInput, data = new Data(handlerInput)) {
+            super(handlerInput);
+            this.responseBuilder = this.handlerInput.responseBuilder;
+            this.data = data;
+        }
+        say(speechOutput, fulfillString = true) {
+            if (fulfillString) {
+                speechOutput = this.data.fulfillString(speechOutput);
+            }
+            this.responseBuilder.speak(this.data.fulfillString(speechOutput));
+            return this;
+        }
+        ask(speechOutput, repromptSpeechOutput = speechOutput, fulfillString = true) {
+            if (fulfillString) {
+                speechOutput = this.data.fulfillString(speechOutput);
+                repromptSpeechOutput = this.data.fulfillString(repromptSpeechOutput);
+            }
+            this.responseBuilder.speak(speechOutput).reprompt(repromptSpeechOutput);
+            return this;
+        }
+        getResponse() {
+            return this.responseBuilder.getResponse();
         }
     }
     class RequestType {
