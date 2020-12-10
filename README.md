@@ -3,7 +3,7 @@
 Skills for Alexa in a Nutshell
 </p>
 <p align='center'>
-    <a href="https://www.npmjs.com/package/@ecromaneli/true-skill"><img src="https://img.shields.io/npm/v/true-skill.svg" alt="module version"></a>&nbsp;
+    <a href="https://www.npmjs.com/package/@ecromaneli/true-skill"><img src="https://img.shields.io/npm/v/@ecromaneli/true-skill.svg" alt="module version"></a>&nbsp;
     <a href="https://github.com/ECRomaneli/true-skill/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="GitHub license"></a>&nbsp;
     <!--<img src="https://circleci.com/gh/ECRomaneli/mQuery.svg?style=shield" alt="CircleCI">&nbsp;-->
     <a href="https://github.com/ECRomaneli/true-skill"><img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat" alt="contributions welcome"></a>
