@@ -13,6 +13,7 @@ declare namespace TrueSkill {
     };
     type IntentHandler = (context?: Context, alexa?: Alexa) => void;
     type RequestHandler = (alexa: Alexa, data?: Data) => void;
+    const ContextFoundException = "ContextFoundException";
     const handlers: AskCore.RequestHandler[] = [];
     interface PersistenceAdapter {
     }
@@ -35,8 +36,18 @@ declare namespace TrueSkill {
                         || (s.intentName !== void 0 && s.intentName !== context.getIntentName())) {
                         return false;
                     }
-                    handler.call(context, context);
-                    return context.isDone();
+                    try {
+                        handler.call(context, context);
+                    }
+                    catch (ex) {
+                        if (ex === ContextFoundException) {
+                            return true;
+                        }
+                        else {
+                            throw ex;
+                        }
+                    }
+                    return false;
                 },
                 handle: (handlerInput) => {
                     let data: Data = new Data(handlerInput);
@@ -121,25 +132,16 @@ declare namespace TrueSkill {
         private invert: boolean = false;
         private handler: RequestHandler;
         private isEligible(): boolean {
-            return this.isDone() || !this.invert === this.eligibility;
-        }
-        public isDone(): boolean {
-            return this.handler !== void 0;
+            return !this.invert === this.eligibility;
         }
         public getHandler(): RequestHandler {
             return this.handler;
         }
         public not(): this {
-            if (this.isDone()) {
-                return this;
-            }
             this.invert = !this.invert;
             return this;
         }
         public hasSlot(...slotNames: string[]): this {
-            if (this.isDone()) {
-                return this;
-            }
             if (slotNames.length === 0) {
                 this.eligibility = this.data.getSlots(false) !== void 0;
                 return this;
@@ -148,9 +150,6 @@ declare namespace TrueSkill {
             return this;
         }
         public hasSessionAttr(...attrNames: string[]): this {
-            if (this.isDone()) {
-                return this;
-            }
             if (attrNames.length === 0) {
                 this.eligibility = this.data.getSlots(false) !== void 0;
                 return this;
@@ -159,19 +158,17 @@ declare namespace TrueSkill {
             return this;
         }
         public when(condition: Condition): this {
-            if (this.isDone()) {
-                return this;
-            }
             this.eligibility = condition();
             return this;
         }
         public do(handler: RequestHandler): void {
-            if (!this.isDone() && this.isEligible()) {
-                this.handler = handler;
+            if (this.isEligible()) {
+                this.default(handler);
             }
         }
         public default(handler: RequestHandler): void {
             this.handler = handler;
+            throw ContextFoundException;
         }
         public getRequestType(): string {
             return AskCore.getRequestType(this.getRequestEnvelope());

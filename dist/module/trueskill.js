@@ -10,6 +10,7 @@ function Skill(skillHandler, builder = AskCore.SkillBuilders.custom()) {
 exports.Skill = Skill;
 var TrueSkill;
 (function (TrueSkill) {
+    const ContextFoundException = "ContextFoundException";
     TrueSkill.handlers = [];
     class Core {
         static launch(handler) {
@@ -29,8 +30,18 @@ var TrueSkill;
                         || (s.intentName !== void 0 && s.intentName !== context.getIntentName())) {
                         return false;
                     }
-                    handler.call(context, context);
-                    return context.isDone();
+                    try {
+                        handler.call(context, context);
+                    }
+                    catch (ex) {
+                        if (ex === ContextFoundException) {
+                            return true;
+                        }
+                        else {
+                            throw ex;
+                        }
+                    }
+                    return false;
                 },
                 handle: (handlerInput) => {
                     let data = new Data(handlerInput);
@@ -117,25 +128,16 @@ var TrueSkill;
             this.invert = false;
         }
         isEligible() {
-            return this.isDone() || !this.invert === this.eligibility;
-        }
-        isDone() {
-            return this.handler !== void 0;
+            return !this.invert === this.eligibility;
         }
         getHandler() {
             return this.handler;
         }
         not() {
-            if (this.isDone()) {
-                return this;
-            }
             this.invert = !this.invert;
             return this;
         }
         hasSlot(...slotNames) {
-            if (this.isDone()) {
-                return this;
-            }
             if (slotNames.length === 0) {
                 this.eligibility = this.data.getSlots(false) !== void 0;
                 return this;
@@ -144,9 +146,6 @@ var TrueSkill;
             return this;
         }
         hasSessionAttr(...attrNames) {
-            if (this.isDone()) {
-                return this;
-            }
             if (attrNames.length === 0) {
                 this.eligibility = this.data.getSlots(false) !== void 0;
                 return this;
@@ -155,19 +154,17 @@ var TrueSkill;
             return this;
         }
         when(condition) {
-            if (this.isDone()) {
-                return this;
-            }
             this.eligibility = condition();
             return this;
         }
         do(handler) {
-            if (!this.isDone() && this.isEligible()) {
-                this.handler = handler;
+            if (this.isEligible()) {
+                this.default(handler);
             }
         }
         default(handler) {
             this.handler = handler;
+            throw ContextFoundException;
         }
         getRequestType() {
             return AskCore.getRequestType(this.getRequestEnvelope());
