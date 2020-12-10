@@ -1,4 +1,4 @@
-<h1 align='center'>True Skill Framework</h1>
+<h1 align='center'>True Skill for Alexa</h1>
 <p align='center'>
 Skills for Alexa in a Nutshell
 </p>
@@ -11,7 +11,7 @@ Skills for Alexa in a Nutshell
 
 ## Working...
 
-    2 weeks for first stable release!!!
+    1.5 weeks for first stable release!!!
 
 ## What is Alexa
 
@@ -23,9 +23,9 @@ In this context, a `Skill` is the name assigned to an application designed to en
 
 Learn more about Skills on [Alexa Skills Kit](https://developer.amazon.com/en-US/alexa/alexa-skills-kit/start).
 
-## The True Skill Framework
+## The True Skill Library
 
-True Skill Framework or just True Skill is a fast, friendly and easy-to-use Skill Creation Helper for JavaScript. It makes the creation of an custom skill less repetitive and more intuitive, working side-by-side with the ASK Core. An perfect combination of what you want and what you write.
+True Skill Library or just True Skill is a fast, friendly and easy-to-use Skill Creation Helper for JavaScript. It makes the creation of an custom skill less repetitive and more intuitive, working side-by-side with the ASK Core. An perfect combination of what you want and what you write.
 
 ## Install
 
@@ -54,7 +54,43 @@ Just a simple example of basic work:
         }
     };
 
-    exports.handler = Alexa.SkillBuilders.custom().addRequestHandlers(LaunchRequestHandler).lambda();
+    const SomeIntentWithSlotHandler = {
+        canHandle(handlerInput) {
+            return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+                && handlerInput.requestEnvelope.request.intent.name === 'SomeIntent'
+                && handlerInput.requestEnvelope.request.intent.slots.someSlot !== void 0;
+        },
+        handle(handlerInput) {
+            const someSlotValue = handlerInput.requestEnvelope.request.intent.slots.someSlot.value; 
+            const speechText = `someSlot value is ${someSlotValue}.`;
+
+            return handlerInput.responseBuilder
+                .speak(speechText)
+                .getResponse();
+        }
+    };
+
+    const SomeIntentWithoutSlotHandler = {
+        canHandle(handlerInput) {
+            return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+                && handlerInput.requestEnvelope.request.intent.name === 'SomeIntent';
+        },
+        handle(handlerInput) {            
+            const speechText = 'What is someSlot value?';
+            const repromptText = 'What?';
+            return handlerInput.responseBuilder
+                .speak(speechText)
+                .reprompt(repromptText)
+                .getResponse();
+        }
+    };
+
+    exports.handler = Alexa.SkillBuilders.custom()
+        .addRequestHandlers(
+            LaunchRequestHandler, 
+            SomeIntentWithSlotHandler,
+            SomeIntentWithoutSlotHandler)
+        .lambda();
 ```
 
 - True Skill
@@ -62,14 +98,48 @@ Just a simple example of basic work:
 ```javascript
     const { Skill } = require('@ecromaneli/true-skill'); // or { TrueSkill }
 
-    Skill(($) => {
-        $.on('LaunchRequest', (context, alexa) => alexa.say('Hello World!'));
+    exports.handler = Skill(($) => {
+        $.launch((context) => {
+            context.default(alexa => alexa.say('Hello World!'));
+        });
+
+        // Can be used 'SomeIntent: IntentRequest' too
+        $.on('SomeIntent', (context) => {
+            context.hasSlot('someSlot').do(alexa => alexa.say('someSlot value is {{someSlot}}.')); 
+            context.default(alexa => alexa.ask('What is someSlot value?', 'What?'));
+        });
     });
+
+    // [EXTRA]
+    // You can also access slots with data parameter
+    (...)
+        context.hasSlot('someSlot').do((alexa, data) => {
+            alexa.say('someSlot value is {{someSlot}}.');
+            console.log(data.slot('someSlot'));
+        }); 
+    (...)
 ```
 
 ## Get Started
 
 ### Working...
+
+## Progress
+
+### First stable
+
+- Structure and topology [DONE];
+- Launch and intents [DONE];
+- Context cases [DONE];
+- Slots and session attributes [DONE];
+- Storage modules;
+- Help and errors responses;
+- Interceptors.
+
+### Future
+
+- Smart Home Module;
+- Infinite possibilities \*-*.
 
 ## Author
 

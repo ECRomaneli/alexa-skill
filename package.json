@@ -1,6 +1,6 @@
 {
   "name": "@ecromaneli/true-skill",
-  "version": "0.1.2",
+  "version": "0.2.3",
   "description": "Skills for Alexa in a Nutshell",
   "main": "dist/module/trueskill",
   "typings": "dist/module/trueskill",

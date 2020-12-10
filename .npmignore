@@ -1,8 +1,13 @@
 lib/
 dist/web/
+test/
+.vscode/
 .circleci/
 
 build.sh
 tsconfig.json
 .gitignore
 .npmignore
+
+ngrok.exe
+local-debugger.js
