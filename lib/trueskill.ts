@@ -54,7 +54,16 @@ namespace TrueSkill {
                 handle: (handlerInput) => {
                     let data: Data = new Data(handlerInput);
                     let alexa: Alexa = new Alexa(handlerInput, data);
-                    context.getHandler().call(alexa, alexa, data);
+
+                    let response = context.getHandler().call(alexa, alexa, data);
+
+                    if (response instanceof Promise) {
+                        return (async () => {
+                            await response;
+                            return alexa.getResponse();
+                        })();
+                    }
+
                     return alexa.getResponse();
                 }
             });
