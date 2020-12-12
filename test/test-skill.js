@@ -1,7 +1,11 @@
-const { Skill } = require('../dist/module/trueskill');
+const { Skill, AttributeType } = require('../dist/module/trueskill');
 
-exports.handler = Skill(($) => {
+exports.handler = Skill(($, builder) => {
     $.launch((context) => {
+        context.hasSessionAttr(['day', 'month', 'year']).do((alexa) => {
+            alexa.say('Welcome back. It looks like there are X more days until your y-th birthday.');
+        });
+
         context.default((alexa) => {
             alexa.ask(
                 'Hello! Welcome to Caketime. What is your birthday?',
@@ -10,8 +14,13 @@ exports.handler = Skill(($) => {
     });
     
     $.on("CaptureBirthdayIntent", (context) => {
-        context.hasSlot("day").do((alexa) => {
-            alexa.say("Ahaa, seu aniversario eh em {{day}} de {{month}} de {{year}}!");
+        // context.hasSessionAttr(['day', 'month', 'year']).do((alexa) => {
+
+        // });
+
+        context.default(async (alexa, data) => {
+            await data.saveSlotsAsAttrs(AttributeType.PERSISTENT);
+            alexa.say("Thanks, I'll remember that you were born {{month}} {{day}} {{year}}.");
         });
     });
 });

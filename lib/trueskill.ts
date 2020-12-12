@@ -4,9 +4,13 @@ import AskCore = require('ask-sdk-core');
 import { Intent, Request, RequestEnvelope, Response, Slot } from 'ask-sdk-model';
 
 export function Skill(skillHandler: TrueSkill, builder: AskCore.CustomSkillBuilder = AskCore.SkillBuilders.custom()): AskCore.LambdaHandler {
-    skillHandler.call(TrueSkill.Core, TrueSkill.Core);
+    skillHandler.call(TrueSkill.Core, TrueSkill.Core, builder);
     builder.addRequestHandlers.apply(builder, TrueSkill.handlers);
     return builder.withCustomUserAgent('trueskill/app').lambda();
+}
+
+export enum AttributeType {
+    REQUEST = 'Request', SESSION = 'Session', PERSISTENT = 'Persistent'
 }
 
 namespace TrueSkill {
@@ -17,11 +21,7 @@ namespace TrueSkill {
     type IntentHandler = (context?: Context, alexa?: Alexa) => void;
     type RequestHandler = (alexa: Alexa, data?: Data) => void;
 
-    const ContextFoundException = "ContextFoundException";
-
     export const handlers: AskCore.RequestHandler[] = [];
-
-    export interface PersistenceAdapter {}
 
     export class Core {
         static launch(handler: IntentHandler): void {
@@ -85,69 +85,8 @@ namespace TrueSkill {
         }
     }
 
-    class Data extends InputWrapper {
-        public slot(slotName: string): string {
-            return this.getSlot(slotName, {value: ""}).value;
-        }
-
-        public sessionAttr(attrName: string, value: any): this;
-        public sessionAttr(attrName: string, value?: any): any {
-            if (value !== void 0) { 
-                this.setSessionAttr(attrName, value);
-                return this;
-            }
-            return this.getSessionAttr(attrName, "");
-        }
-
-        public getSlots(safeReturn: boolean = true): Map<Slot> {
-            let slots = this.getIntent().slots;
-            return slots || (safeReturn ? {} : void 0);
-        }
-
-        public hasSlot(slotName: string): boolean {
-            let slots: Map<Slot> = this.getSlots();
-            let slot = slots[slotName];
-            // When slot is not recognized, '?' is returned
-            return slot !== void 0 && slot.value !== '?';
-        }
-
-        public getSlot(slotName: string, defaultValue?: any): Slot {
-            return this.hasSlot(slotName) ? 
-                this.getSlots()[slotName] : 
-                defaultValue;
-        }
-
-        public getSessionAttrs(safeReturn: boolean = true): Object {
-            return this.getAttributesManager().getSessionAttributes() || (safeReturn ? {} : void 0);
-        }
-
-        public hasSessionAttr(attrName: string): boolean {
-            return this.getSessionAttrs().hasOwnProperty(attrName);
-        }
-
-        public getSessionAttr(attrName: string, defaultValue?: any) {
-            return this.hasSessionAttr(attrName) ? 
-                this.getSessionAttrs()[attrName] : 
-                defaultValue;
-        }
-
-        public setSessionAttr(attrName: string, value: any): this {
-            let attrs: Map<any> = {};
-            attrs[attrName] = value;
-            return this.setSessionAttrs(attrs);
-        }
-
-        public setSessionAttrs(sessionAttrs: Map<any>): this {
-            this.getAttributesManager().setSessionAttributes(sessionAttrs);
-            return this;
-        }
-
-        public fulfillString(str: string): string {
-            return str.replace(/{{([^}]+)}}/g, (_match, group) => this.slot(group));
-        }
-    }
-
     class Context extends InputWrapper {
+        public static ContextFoundException = "ContextFoundException";
         private data: Data = new Data(this.handlerInput);
         private eligibility: boolean = false;
         private invert: boolean = false;
@@ -198,7 +137,7 @@ namespace TrueSkill {
 
         public default(handler: RequestHandler): void {
             this.handler = handler;
-            throw ContextFoundException;
+            throw Context.ContextFoundException;
         }
 
         public getRequestType(): string {
@@ -236,6 +175,209 @@ namespace TrueSkill {
 
         public getResponse(): Response {
             return this.responseBuilder.getResponse();
+        }
+    }
+
+    class Data extends InputWrapper {
+        private static EMPTY_SLOT = { value: '' };
+
+        /* SLOTS */
+
+        public slot(slotName: string): string {
+            return this.getSlot(slotName, Data.EMPTY_SLOT).value;
+        }
+        
+        public getSlots(safeReturn: boolean = true): Map<Slot> {
+            let slots = this.getIntent().slots;
+            return slots || (safeReturn ? {} : void 0);
+        }
+
+        public hasSlot(slotName: string): boolean {
+            let slots: Map<Slot> = this.getSlots();
+            let slot = slots[slotName];
+            // When slot is not recognized, '?' is returned
+            return slot !== void 0 && slot.value !== '?';
+        }
+
+        public getSlot(slotName: string, defaultValue?: any): Slot {
+            return this.hasSlot(slotName) ? 
+                this.getSlots()[slotName] : 
+                defaultValue;
+        }
+
+        /* REQUEST ATTRIBUTES */
+
+        public requestAttr(attrName: string, value: any): this;
+        public requestAttr(attrName: string, value?: any): any {
+            return this.attr(AttributeType.REQUEST, attrName, value);
+        }
+
+        public getRequestAttrs(safeReturn?: boolean): any {
+            return this.getAttrs(AttributeType.REQUEST, safeReturn);
+        }
+
+        public setRequestAttrs(attrs: Map<any>): this {
+            return this.setAttrs(AttributeType.REQUEST, attrs);
+        }
+
+        public hasRequestAttr(attrName: string): boolean {
+            return this.hasAttr(AttributeType.REQUEST, attrName);
+        }
+
+        public getRequestAttr(attrName: string, defaultValue?: any) {
+            return this.getAttr(AttributeType.REQUEST, attrName, defaultValue);
+        }
+
+        public setRequestAttr(attrName: string, value: any): this {
+            return this.setAttr(AttributeType.REQUEST, attrName, value);
+        }
+
+        /* SESSION ATTRIBUTES */
+
+        public sessionAttr(attrName: string, value: any): this;
+        public sessionAttr(attrName: string, value?: any): any {
+            return this.attr(AttributeType.SESSION, attrName, value);
+        }
+
+        public getSessionAttrs(safeReturn?: boolean): any {
+            return this.getAttrs(AttributeType.SESSION, safeReturn);
+        }
+
+        public setSessionAttrs(attrs: Map<any>): this {
+            return this.setAttrs(AttributeType.SESSION, attrs);
+        }
+
+        public hasSessionAttr(attrName: string): boolean {
+            return this.hasAttr(AttributeType.SESSION, attrName);
+        }
+
+        public getSessionAttr(attrName: string, defaultValue?: any) {
+            return this.getAttr(AttributeType.SESSION, attrName, defaultValue);
+        }
+
+        public setSessionAttr(attrName: string, value: any): this {
+            return this.setAttr(AttributeType.SESSION, attrName, value);
+        }
+
+        /* PERSISTENT ATTRIBUTES */
+
+        public persistentAttr(attrName: string, value: any): this;
+        public persistentAttr(attrName: string, value?: any): any {
+            return this.attr(AttributeType.PERSISTENT, attrName, value);
+        }
+
+        public getPersistentAttrs(safeReturn?: boolean): any {
+            return this.getAttrs(AttributeType.PERSISTENT, safeReturn);
+        }
+
+        public setPersistentAttrs(attrs: Map<any>): this {
+            return this.setAttrs(AttributeType.PERSISTENT, attrs);
+        }
+
+        public hasPersistentAttr(attrName: string): boolean {
+            return this.hasAttr(AttributeType.PERSISTENT, attrName);
+        }
+
+        public getPersistentAttr(attrName: string, defaultValue?: any) {
+            return this.getAttr(AttributeType.PERSISTENT, attrName, defaultValue);
+        }
+
+        public setPersistentAttr(attrName: string, value: any): this {
+            return this.setAttr(AttributeType.PERSISTENT, attrName, value);
+        }
+
+        public async savePersistentAttrs() {
+            return this.getAttributesManager().savePersistentAttributes();
+        }
+
+        /* GENERIC ATTRIBUTES */
+
+        public attr(type: AttributeType, attrName: string, value: any): this;
+        public attr(type: AttributeType, attrName: string, value?: any): any {
+            if (value !== void 0) { 
+                this.setAttr(type, attrName, value);
+                return this;
+            }
+            return this.getAttr(type, attrName, "");
+        }
+
+        public getAttrs(type: AttributeType, safeReturn: boolean = true): Map<any> {
+            return this.getAttributesManager()['get' + type + 'Attributes']() || (safeReturn ? {} : void 0);
+        }
+
+        public hasAttr(type: AttributeType, attrName: string): boolean {
+            return this.getAttrs(type, true).hasOwnProperty(attrName);
+        }
+
+        public getAttr(type: AttributeType, attrName: string, defaultValue?: any): any {
+            return this.hasAttr(type, attrName) ? 
+                this.getAttrs(type, false)[attrName] : 
+                defaultValue;
+        }
+
+        public setAttr(type: AttributeType, attrName: string, value: any): this {
+            let attrs: Map<any> = {};
+            attrs[attrName] = value;
+            return this.setAttrs(type, attrs);
+        }
+
+        public setAttrs(type: AttributeType, attrs: Map<any>): this {
+            this.getAttributesManager()["set" + type + "Attributes"](attrs);
+            return this;
+        }
+
+        public saveSlotsAsAttrs(slotName?: string[]): void;
+        public saveSlotsAsAttrs(attrType: AttributeType, slotName?: string[]): void;
+        public saveSlotsAsAttrs(attrTypeOrSlotName?: AttributeType | string[], slotNames?: string[]): void | Promise<void> {
+            let type: AttributeType;
+
+            if (arguments.length === 2) {
+                type = <any> attrTypeOrSlotName;
+            } else {
+                type = AttributeType.REQUEST;
+                slotNames = <any> attrTypeOrSlotName;
+            }
+
+            const slots: Map<Slot> = this.getSlots();
+
+            let attrs: Map<any> = {};
+            if (slotNames === void 0) {
+                for (let slotName in slots) { attrs[slotName] = this.getSlot(slotName); }
+            } else {
+                if (slotNames.length === 0) { return; }
+                slotNames.forEach((slotName) => attrs[slotName] = this.getSlot(slotName));
+            }
+            this.setAttrs(type, attrs);
+
+            if (type === AttributeType.PERSISTENT) {
+                return this.savePersistentAttrs();
+            }
+        }
+
+        public swapAttrs(fromType: AttributeType, toType: AttributeType, attrNames?: string[]): void {
+            const fromAttrs = this.getAttrs(fromType);
+            
+            let attrs: Map<any> = {};
+            if (attrNames === void 0) {
+                for (let slotName in fromAttrs) { attrs[slotName] = this.getSlot(slotName); }
+            } else {
+                if (attrNames.length === 0) { return; }
+                attrNames.forEach((slotName) => attrs[slotName] = fromAttrs[slotName]);
+            }
+
+            this.setAttrs(toType, attrs);
+        }
+
+        /* FULFILL STRING */
+
+        public fulfillString(str: string): string {
+            return str.replace(/{{([^}]+)}}/g, (match, group) => {
+                if (this.hasSlot(group)) { return this.slot(group); }
+                if (this.hasRequestAttr(group)) { return this.getRequestAttr(group); }
+                if (this.hasSessionAttr(group)) { return this.getSessionAttr(group); }
+                if (this.hasPersistentAttr(group)) { return this.getPersistentAttr(group); }
+                return match;
+            });
         }
     }
 
