@@ -29,9 +29,21 @@ True Skill Library or just True Skill is a fast, friendly and easy-to-use Skill 
 
 ## Install
 
-When you creating your skill, just import true-skill into your `package.json`, or alternatively run:
+When you creating your skill, just import `ask-sdk-core`, `ask-sdk-model` and `true-skill` into your `package.json`, or alternatively run:
 
+```bash
+    npm i ask-sdk-core
+    npm i ask-sdk-model
     npm i @ecromaneli/true-skill
+
+```
+
+Last tested:
+
+```json
+    "ask-sdk-core": "^2.7.0",
+    "ask-sdk-model": "^1.19.0",
+```
 
 ## Comparison
 

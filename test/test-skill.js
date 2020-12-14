@@ -1,9 +1,10 @@
-const { Skill, AttributeType } = require('../dist/module/trueskill');
+const { Skill } = require('../dist/module/main');
+const { AttributeType } = require('../dist/module/enums/AttributeType');
 
 exports.handler = Skill(($, builder) => {
     $.launch((context) => {
-        context.hasSessionAttr(['day', 'month', 'year']).do((alexa) => {
-            alexa.say('Welcome back. It looks like there are X more days until your y-th birthday.');
+        context.hasSessionAttr().do((alexa, data) => {
+            alexa.say('Welcome back. It looks like there are X more days until your y-th birthdayy.' + data.sessionAttr('day'));
         });
 
         context.default((alexa) => {
@@ -14,13 +15,29 @@ exports.handler = Skill(($, builder) => {
     });
     
     $.on("CaptureBirthdayIntent", (context) => {
-        // context.hasSessionAttr(['day', 'month', 'year']).do((alexa) => {
-
-        // });
-
         context.default(async (alexa, data) => {
             await data.saveSlotsAsAttrs(AttributeType.PERSISTENT);
             alexa.say("Thanks, I'll remember that you were born {{month}} {{day}} {{year}}.");
         });
     });
+
+    const LoadBirthdayInterceptor = {
+        async process(handlerInput) {
+            const attributesManager = handlerInput.attributesManager;
+            const sessionAttributes = await attributesManager.getPersistentAttributes() || {};
+            
+            const year = sessionAttributes.hasOwnProperty('year') ? sessionAttributes.year : 0;
+            const month = sessionAttributes.hasOwnProperty('month') ? sessionAttributes.month : 0;
+            const day = sessionAttributes.hasOwnProperty('day') ? sessionAttributes.day : 0;
+            
+            if (year && month && day) {
+                attributesManager.setSessionAttributes(sessionAttributes);
+            }
+        }
+    }
+
+    const { FileSystemPersistenceAdapter } = require('fs-persistence-adapter');
+    builder.withPersistenceAdapter(
+        new FileSystemPersistenceAdapter("data/")
+    ).addRequestInterceptors(LoadBirthdayInterceptor);
 });
