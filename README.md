@@ -11,7 +11,7 @@ Skills for Alexa in a Nutshell
 
 ## Working...
 
-    1.5 weeks for first stable release!!!
+    0.7 week for first stable release!!!
 
 ## What is Alexa
 
@@ -140,11 +140,11 @@ Just a simple example of basic work:
 
 ### First stable
 
-- Structure and topology [DONE];
-- Launch and intents [DONE];
-- Context cases [DONE];
-- Slots and session attributes [DONE];
-- Storage modules;
+- Structure and topology [**DONE**];
+- Launch and intents [**DONE**];
+- Context cases [**DONE**];
+- Slots and session attributes [**DONE**];
+- Persistence attributes [**DONE**];
 - Help and errors responses;
 - Interceptors.
 
