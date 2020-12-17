@@ -1,43 +1,36 @@
 const { Skill } = require('../dist/module/main');
 const { AttributeType } = require('../dist/module/enums/AttributeType');
+const { InterceptorType } = require('../dist/module/enums/InterceptorType');
+const { FileSystemPersistenceAdapter } = require('fs-persistence-adapter');
 
-exports.handler = Skill(($, builder) => {
+exports.handler = Skill(($) => {
     $.launch((context) => {
-        context.hasSessionAttr().do((alexa, data) => {
-            alexa.say('Welcome back. It looks like there are X more days until your y-th birthdayy.' + data.sessionAttr('day'));
+        context.hasSessionAttr(['day', 'month', 'year']).do((alexa, data) => {
+            alexa.say('Bem vindo de volta. Voce nasceu em {{day}} de {{month}} de {{year}}. Teste: ' + data.sessionAttr('day'));
         });
 
         context.default((alexa) => {
             alexa.ask(
-                'Hello! Welcome to Caketime. What is your birthday?',
-                'I was born Nov. 6th, 2014. When were you born?');
+                'Oi! Bem vindo ao Hora do bolo. Quando eh seu aniversahrio?',
+                'Eu nasci em 6 de novembro de 2014. Quando voce nasceu?');
         });
     });
     
-    $.on("CaptureBirthdayIntent", (context) => {
-        context.default(async (alexa, data) => {
-            await data.saveSlotsAsAttrs(AttributeType.PERSISTENT);
-            alexa.say("Thanks, I'll remember that you were born {{month}} {{day}} {{year}}.");
-        });
+    $.on("CaptureBirthdayIntent", true, async (alexa, data) => {
+        await data.saveSlotsAsAttrs(AttributeType.PERSISTENT);
+        alexa.say("Uau! Vou me lembrar que voce nasceu em {{day}} de {{month}} de {{year}}.");
     });
 
-    const LoadBirthdayInterceptor = {
-        async process(handlerInput) {
-            const attributesManager = handlerInput.attributesManager;
-            const sessionAttributes = await attributesManager.getPersistentAttributes() || {};
-            
-            const year = sessionAttributes.hasOwnProperty('year') ? sessionAttributes.year : 0;
-            const month = sessionAttributes.hasOwnProperty('month') ? sessionAttributes.month : 0;
-            const day = sessionAttributes.hasOwnProperty('day') ? sessionAttributes.day : 0;
-            
-            if (year && month && day) {
-                attributesManager.setSessionAttributes(sessionAttributes);
-            }
-        }
-    }
+    $.intercept(InterceptorType.REQUEST, async function loadBirthday(data) {
+        await data.swapAttrs(AttributeType.PERSISTENT, AttributeType.SESSION, ['day', 'month', 'year']);
+    })
 
-    const { FileSystemPersistenceAdapter } = require('fs-persistence-adapter');
-    builder.withPersistenceAdapter(
-        new FileSystemPersistenceAdapter("data/")
-    ).addRequestInterceptors(LoadBirthdayInterceptor);
+    $   .help(true, (alexa) => alexa.ask('Voce pode dizer um "oi" pra mim! Como posso te ajudar?'))
+        .cancel(true, (alexa) => alexa.say('Cancelado. Tchau!'))
+        .stop(true, (alexa) => alexa.say('Tchau!'))
+        .intent(true, (alexa) => alexa.say('Voce apenas acionou um intent nao capturada!'))
+        .sessionEnded(true, (alexa) => { alexa.say('Fim da sessao'); });
+
+
+    $.persistenceAdapter(new FileSystemPersistenceAdapter("data/"));
 });

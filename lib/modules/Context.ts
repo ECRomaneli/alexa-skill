@@ -7,8 +7,8 @@ import { isEmptyObject } from "../utils/Object";
 import { Relative } from "../utils/Response";
 import { Alexa } from './Alexa';
 
+export type RequestHandler = (alexa: Alexa, data?: Data) => Relative<void>;
 type Condition = () => Relative<boolean>;
-type RequestHandler = (alexa: Alexa, data?: Data) => Relative<void>;
 type ContextRule = { status: RuleStatus, not?: boolean, conditions: Condition[], handler?: RequestHandler };
 
 export class Context extends InputWrapper {

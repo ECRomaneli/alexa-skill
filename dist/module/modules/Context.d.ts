@@ -3,8 +3,8 @@ import { Data } from "./Data";
 import { InputWrapper } from "./InputWrapper";
 import { Relative } from "../utils/Response";
 import { Alexa } from './Alexa';
+export declare type RequestHandler = (alexa: Alexa, data?: Data) => Relative<void>;
 declare type Condition = () => Relative<boolean>;
-declare type RequestHandler = (alexa: Alexa, data?: Data) => Relative<void>;
 export declare class Context extends InputWrapper {
     static NoRulesAcceptedException: string;
     private async;
