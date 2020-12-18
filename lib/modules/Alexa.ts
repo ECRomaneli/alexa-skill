@@ -14,14 +14,16 @@ export class Alexa extends InputWrapper {
 
     public say(speechOutput: string, fulfillString: boolean = true): this {
         if (fulfillString) { speechOutput = this.data.fulfillString(speechOutput); }
-        this.responseBuilder.speak(this.data.fulfillString(speechOutput));
+        this.responseBuilder.speak(speechOutput);
         return this;
     }
 
     public ask(speechOutput: string, repromptSpeechOutput: string = speechOutput, fulfillString: boolean = true): this {
         if (fulfillString) {
-            speechOutput = this.data.fulfillString(speechOutput);
+            let equals = speechOutput === repromptSpeechOutput;
             repromptSpeechOutput = this.data.fulfillString(repromptSpeechOutput);
+            speechOutput = equals ? repromptSpeechOutput : this.data.fulfillString(speechOutput);
+            
         }
         this.responseBuilder.speak(speechOutput).reprompt(repromptSpeechOutput);
         return this;

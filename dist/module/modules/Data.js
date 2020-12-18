@@ -19,7 +19,11 @@ class Data extends InputWrapper_1.InputWrapper {
         return this.getSlot(slotName, Data.EMPTY_SLOT).value;
     }
     getSlots( /*safeReturn: boolean = true*/) {
-        let slots = this.getIntent().slots;
+        let intent = this.getIntent();
+        if (intent === void 0) {
+            return {};
+        }
+        let slots = intent.slots;
         return slots /* || (safeReturn ? {} : void 0)*/;
     }
     hasSlot(slotName) {

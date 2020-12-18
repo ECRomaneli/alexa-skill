@@ -26,30 +26,27 @@ class Context extends InputWrapper_1.InputWrapper {
         this.getCurrentRule().not = true;
         return this;
     }
-    hasSlot(...slotNames) {
-        return this.when(slotNames.length === 0 ?
-            (() => !Object_1.isEmptyObject(this.data.getSlots())) :
-            (() => slotNames.every((slotName) => this.data.hasSlot(slotName))));
+    hasSlot(slotNames) {
+        return this.when(slotNames && slotNames.length ?
+            (() => slotNames.every(slotName => this.data.hasSlot(slotName))) :
+            (() => !Object_1.isEmptyObject(this.data.getSlots())));
     }
-    hasRequestAttr(...attrNames) {
-        return this._hasAttr(Attributetype_1.AttributeType.REQUEST, attrNames);
+    hasRequestAttr(attrNames) {
+        return this.hasAttr(Attributetype_1.AttributeType.REQUEST, attrNames);
     }
-    hasSessionAttr(...attrNames) {
-        return this._hasAttr(Attributetype_1.AttributeType.SESSION, attrNames);
+    hasSessionAttr(attrNames) {
+        return this.hasAttr(Attributetype_1.AttributeType.SESSION, attrNames);
     }
-    hasPersistentAttr(...attrNames) {
-        return this._hasAttr(Attributetype_1.AttributeType.PERSISTENT, attrNames);
+    hasPersistentAttr(attrNames) {
+        return this.hasAttr(Attributetype_1.AttributeType.PERSISTENT, attrNames);
     }
-    hasAttr(type, ...attrNames) {
-        return this._hasAttr(type, attrNames);
-    }
-    _hasAttr(type, attrNames) {
+    hasAttr(type, attrNames) {
         if (type === Attributetype_1.AttributeType.PERSISTENT) {
             this.async = true;
         }
-        return this.when(attrNames.length === 0 ?
-            (() => !Object_1.isEmptyObject(this.data.getAttrs(type))) :
-            (() => !!this.data.hasAttr(type, attrNames)));
+        return this.when(attrNames && attrNames.length ?
+            (() => !!this.data.hasAttr(type, attrNames)) :
+            (() => !Object_1.isEmptyObject(this.data.getAttrs(type))));
     }
     when(condition) {
         this.getCurrentRule().conditions.push(condition);

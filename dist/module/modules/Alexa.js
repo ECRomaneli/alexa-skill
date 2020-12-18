@@ -13,13 +13,14 @@ class Alexa extends InputWrapper_1.InputWrapper {
         if (fulfillString) {
             speechOutput = this.data.fulfillString(speechOutput);
         }
-        this.responseBuilder.speak(this.data.fulfillString(speechOutput));
+        this.responseBuilder.speak(speechOutput);
         return this;
     }
     ask(speechOutput, repromptSpeechOutput = speechOutput, fulfillString = true) {
         if (fulfillString) {
-            speechOutput = this.data.fulfillString(speechOutput);
+            let equals = speechOutput === repromptSpeechOutput;
             repromptSpeechOutput = this.data.fulfillString(repromptSpeechOutput);
+            speechOutput = equals ? repromptSpeechOutput : this.data.fulfillString(speechOutput);
         }
         this.responseBuilder.speak(speechOutput).reprompt(repromptSpeechOutput);
         return this;

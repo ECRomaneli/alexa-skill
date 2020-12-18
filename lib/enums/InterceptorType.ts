@@ -1,0 +1,1 @@
+export enum InterceptorType { REQUEST, RESPONSE }

@@ -7,8 +7,8 @@ import { isEmptyObject } from "../utils/Object";
 import { Relative } from "../utils/Response";
 import { Alexa } from './Alexa';
 
+export type RequestHandler = (alexa: Alexa, data?: Data) => Relative<void>;
 type Condition = () => Relative<boolean>;
-type RequestHandler = (alexa: Alexa, data?: Data) => Relative<void>;
 type ContextRule = { status: RuleStatus, not?: boolean, conditions: Condition[], handler?: RequestHandler };
 
 export class Context extends InputWrapper {
@@ -22,36 +22,32 @@ export class Context extends InputWrapper {
         return this;
     }
 
-    public hasSlot(...slotNames: string[]): this {
-        return this.when(slotNames.length === 0 ?
-            (() => !isEmptyObject(this.data.getSlots())) :
-            (() => slotNames.every((slotName) => this.data.hasSlot(slotName)))
+    public hasSlot(slotNames?: string[]): this {
+        return this.when(slotNames && slotNames.length ?
+            (() => slotNames.every(slotName => this.data.hasSlot(slotName))) :
+            (() => !isEmptyObject(this.data.getSlots()))
         );
     }
 
-    public hasRequestAttr(...attrNames: string[]): this {
-        return this._hasAttr(AttributeType.REQUEST, attrNames);
+    public hasRequestAttr(attrNames?: string[]): this {
+        return this.hasAttr(AttributeType.REQUEST, attrNames);
     }
 
-    public hasSessionAttr(...attrNames: string[]): this {
-        return this._hasAttr(AttributeType.SESSION, attrNames);
+    public hasSessionAttr(attrNames?: string[]): this {
+        return this.hasAttr(AttributeType.SESSION, attrNames);
     }
 
-    public hasPersistentAttr(...attrNames: string[]): this {
-        return this._hasAttr(AttributeType.PERSISTENT, attrNames);
+    public hasPersistentAttr(attrNames?: string[]): this {
+        return this.hasAttr(AttributeType.PERSISTENT, attrNames);
     }
 
-    public hasAttr(type: AttributeType, ...attrNames: string[]): this {
-        return this._hasAttr(type, attrNames);
-    }
-
-    private _hasAttr(type: AttributeType, attrNames: string[]): this {
+    public hasAttr(type: AttributeType, attrNames?: string[]): this {
         if (type === AttributeType.PERSISTENT) {
             this.async = true;
         }
-        return this.when(attrNames.length === 0 ?
-            (() => !isEmptyObject(this.data.getAttrs(type))) :
-            (() => !!this.data.hasAttr(<any> type, attrNames))
+        return this.when(attrNames && attrNames.length ?
+            (() => !!this.data.hasAttr(type, attrNames)) :
+            (() => !isEmptyObject(this.data.getAttrs(type)))
         );
     }
 

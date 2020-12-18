@@ -21,6 +21,6 @@ export abstract class InputWrapper {
     }
 
     public getIntent(): Intent {
-        return  (<any> this.getRequest()).intent;
+        return (<any> this.getRequest()).intent;
     }
 }
