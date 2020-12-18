@@ -11,12 +11,11 @@ export declare class Context extends InputWrapper {
     private data;
     private rules;
     not(): this;
-    hasSlot(...slotNames: string[]): this;
-    hasRequestAttr(...attrNames: string[]): this;
-    hasSessionAttr(...attrNames: string[]): this;
-    hasPersistentAttr(...attrNames: string[]): this;
-    hasAttr(type: AttributeType, ...attrNames: string[]): this;
-    private _hasAttr;
+    hasSlot(slotNames?: string[]): this;
+    hasRequestAttr(attrNames?: string[]): this;
+    hasSessionAttr(attrNames?: string[]): this;
+    hasPersistentAttr(attrNames?: string[]): this;
+    hasAttr(type: AttributeType, attrNames?: string[]): this;
     when(condition: Condition): this;
     do(handler: RequestHandler): void;
     default(handler: RequestHandler): void;

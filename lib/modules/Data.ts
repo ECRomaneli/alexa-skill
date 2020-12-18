@@ -15,7 +15,9 @@ export class Data extends InputWrapper {
     }
     
     public getSlots(/*safeReturn: boolean = true*/): Collection<Slot> {
-        let slots = this.getIntent().slots;
+        let intent = this.getIntent();
+        if (intent === void 0) { return {}; }
+        let slots = intent.slots;
         return slots/* || (safeReturn ? {} : void 0)*/;
     }
 

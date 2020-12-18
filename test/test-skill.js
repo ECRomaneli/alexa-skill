@@ -6,7 +6,10 @@ const { FileSystemPersistenceAdapter } = require('fs-persistence-adapter');
 exports.handler = Skill(($) => {
     $.launch((context) => {
         context.hasSessionAttr(['day', 'month', 'year']).do((alexa, data) => {
-            alexa.say('Bem vindo de volta. Voce nasceu em {{day}} de {{month}} de {{year}}. Teste: ' + data.sessionAttr('day'));
+            let day = data.sessionAttr('day');
+            let month = data.sessionAttr('month');
+            let year = data.sessionAttr('year');
+            alexa.say('Bem vindo de volta. Voce nasceu em {{day}} de {{month}} de {{year}}. Teste: ');
         });
 
         context.default((alexa) => {
@@ -16,9 +19,9 @@ exports.handler = Skill(($) => {
         });
     });
     
-    $.on("CaptureBirthdayIntent", true, async (alexa, data) => {
+    $.on('CaptureBirthdayIntent', true, async (alexa, data) => {
         await data.saveSlotsAsAttrs(AttributeType.PERSISTENT);
-        alexa.say("Uau! Vou me lembrar que voce nasceu em {{day}} de {{month}} de {{year}}.");
+        alexa.say('Uau! Vou me lembrar que voce nasceu em {{day}} de {{month}} de {{year}}.');
     });
 
     $.intercept(InterceptorType.REQUEST, async function loadBirthday(data) {
@@ -29,8 +32,6 @@ exports.handler = Skill(($) => {
         .cancel(true, (alexa) => alexa.say('Cancelado. Tchau!'))
         .stop(true, (alexa) => alexa.say('Tchau!'))
         .intent(true, (alexa) => alexa.say('Voce apenas acionou um intent nao capturada!'))
-        .sessionEnded(true, (alexa) => { alexa.say('Fim da sessao'); });
-
-
-    $.persistenceAdapter(new FileSystemPersistenceAdapter("data/"));
+        .sessionEnded(true, (alexa) => { alexa.say('Fim da sessao'); })
+        .persistenceAdapter(new FileSystemPersistenceAdapter('data/'));
 });
