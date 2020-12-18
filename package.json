@@ -1,9 +1,9 @@
 {
   "name": "@ecromaneli/true-skill",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Skills for Alexa in a Nutshell",
-  "main": "dist/module/trueskill",
-  "typings": "dist/module/trueskill",
+  "main": "dist/module/main",
+  "typings": "dist/module/main",
   "directories": {
     "test": "test"
   },
@@ -33,10 +33,11 @@
   },
   "homepage": "https://github.com/ECRomaneli/true-skill#readme",
   "devDependencies": {
-    "typescript": "^4.1.2",
-    "uglify-js": "^3.12.1",
+    "@types/node": "^14.14.12",
+    "fs-persistence-adapter": "~0.1.1",
     "ask-sdk-core": "^2.7.0",
     "ask-sdk-model": "^1.19.0",
-    "@types/node": "^14.14.10"
+    "typescript": "^4.1.2",
+    "uglify-js": "^3.12.1"
   }
 }

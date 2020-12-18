@@ -1,0 +1,45 @@
+import { PersistenceAdapter, RequestHandler as ASKRequestHandler, RequestInterceptor, ResponseInterceptor } from "ask-sdk-core";
+import { Response as ASKResponse } from "ask-sdk-model";
+import { InterceptorType } from "../enums/InterceptorType";
+import { Relative } from "../utils/Response";
+import { Context, RequestHandler } from "./Context";
+import { Data } from "./Data";
+export declare type Selector = {
+    requestType: string;
+    intentName?: string;
+};
+declare type ContextHandler = (context?: Context) => void;
+declare type InterceptorHandler = (data: Data, response?: ASKResponse) => Relative<void>;
+export declare class Core {
+    static userAgent: string;
+    static handlers: ASKRequestHandler[];
+    static requestInterceptors: RequestInterceptor[];
+    static responseInterceptors: ResponseInterceptor[];
+    static persAdapter?: PersistenceAdapter;
+    static launch(contextHandler: ContextHandler): Core;
+    static launch(transitiveContext: true, requestHandler: RequestHandler): Core;
+    static launch(transitiveContext: false, requestHandler: ContextHandler): Core;
+    static intent(contextHandler: ContextHandler): Core;
+    static intent(transitiveContext: true, requestHandler: RequestHandler): Core;
+    static intent(transitiveContext: false, requestHandler: ContextHandler): Core;
+    static sessionEnded(contextHandler: ContextHandler): Core;
+    static sessionEnded(transitiveContext: true, requestHandler: RequestHandler): Core;
+    static sessionEnded(transitiveContext: false, requestHandler: ContextHandler): Core;
+    static help(contextHandler: ContextHandler): Core;
+    static help(transitiveContext: true, requestHandler: RequestHandler): Core;
+    static help(transitiveContext: false, requestHandler: ContextHandler): Core;
+    static cancel(contextHandler: ContextHandler): Core;
+    static cancel(transitiveContext: true, requestHandler: RequestHandler): Core;
+    static cancel(transitiveContext: false, requestHandler: ContextHandler): Core;
+    static stop(contextHandler: ContextHandler): Core;
+    static stop(transitiveContext: true, requestHandler: RequestHandler): Core;
+    static stop(transitiveContext: false, requestHandler: ContextHandler): Core;
+    static on(selector: string | Selector, contextHandler: ContextHandler): Core;
+    static on(selector: string | Selector, transitiveContext: true, requestHandler: RequestHandler): Core;
+    static on(selector: string | Selector, transitiveContext: false, requestHandler: ContextHandler): Core;
+    static on(selector: string | Selector, handlerOrTransContext: ContextHandler | boolean, handler?: ContextHandler | RequestHandler): Core;
+    static intercept(type: InterceptorType, handler: InterceptorHandler): Core;
+    static persistenceAdapter(persistenceAdapter: PersistenceAdapter): Core;
+    static customUserAgent(customUserAgent: string): Core;
+}
+export {};

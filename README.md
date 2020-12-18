@@ -11,7 +11,7 @@ Skills for Alexa in a Nutshell
 
 ## Working...
 
-    1.5 weeks for first stable release!!!
+    0.7 week for first stable release!!!
 
 ## What is Alexa
 
@@ -29,9 +29,21 @@ True Skill Library or just True Skill is a fast, friendly and easy-to-use Skill 
 
 ## Install
 
-When you creating your skill, just import true-skill into your `package.json`, or alternatively run:
+When you creating your skill, just import `ask-sdk-core`, `ask-sdk-model` and `true-skill` into your `package.json`, or alternatively run:
 
+```bash
+    npm i ask-sdk-core
+    npm i ask-sdk-model
     npm i @ecromaneli/true-skill
+
+```
+
+Last tested:
+
+```json
+    "ask-sdk-core": "^2.7.0",
+    "ask-sdk-model": "^1.19.0",
+```
 
 ## Comparison
 
@@ -128,11 +140,11 @@ Just a simple example of basic work:
 
 ### First stable
 
-- Structure and topology [DONE];
-- Launch and intents [DONE];
-- Context cases [DONE];
-- Slots and session attributes [DONE];
-- Storage modules;
+- Structure and topology [**DONE**];
+- Launch and intents [**DONE**];
+- Context cases [**DONE**];
+- Slots and session attributes [**DONE**];
+- Persistence attributes [**DONE**];
 - Help and errors responses;
 - Interceptors.
 

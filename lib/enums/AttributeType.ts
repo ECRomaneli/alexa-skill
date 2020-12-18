@@ -1,0 +1,1 @@
+export enum AttributeType { REQUEST = 'Request', SESSION = 'Session', PERSISTENT = 'Persistent' }

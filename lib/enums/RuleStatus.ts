@@ -1,0 +1,1 @@
+export enum RuleStatus { PENDING, REJECTED, ACCEPTED }
