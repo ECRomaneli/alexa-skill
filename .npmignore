@@ -2,6 +2,7 @@ lib/
 dist/web/
 test/
 data/
+assets/
 .vscode/
 .circleci/
 

@@ -64,7 +64,7 @@ localDebugger.on('connection', (socket) => {
     console.log(`Connection from: ${socket.remoteAddress}:${socket.remotePort}`);
     socket.on('data', (data) => {
         const body = JSON.parse(data.toString().split(HTTP_BODY_DELIMITER).pop());
-        console.log(`Request envelope: ${JSON.stringify(body)}`);
+       // console.log(`Request envelope: ${JSON.stringify(body)}`);
         skillInvoker[lambdaHandlerName](body, null, (_invokeErr, response) => {
             response = JSON.stringify(response);
             console.log(`Response envelope: ${response}`);

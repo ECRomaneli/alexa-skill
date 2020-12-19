@@ -1,42 +1,44 @@
+import ASKCore = require('ask-sdk-core');
 import { HandlerInput, PersistenceAdapter, RequestHandler as ASKRequestHandler, RequestInterceptor, ResponseInterceptor } from "ask-sdk-core";
-import { Response as ASKResponse } from "ask-sdk-model";
+import { Response, services } from "ask-sdk-model";
 import { InterceptorType } from "../enums/InterceptorType";
 import { RequestType } from "../enums/RequestType";
 import { Relative, toRelative } from "../utils/Response";
-import { Alexa } from "./Alexa";
 import { Context, RequestHandler } from "./Context";
+import { improveResponseBuilder } from "./Response";
 import { Data } from "./Data";
 
 export type Selector = { requestType: string, intentName?: string };
 type ContextHandler = (context?: Context) => void;
-type InterceptorHandler = (data: Data, response?: ASKResponse) => Relative<void>;
+type InterceptorHandler = (data: Data, response?: Response) => Relative<void>;
 
 export class Core {
     static userAgent: string;
     static handlers: ASKRequestHandler[] = [];
     static requestInterceptors: RequestInterceptor[] = [];
     static responseInterceptors: ResponseInterceptor[] = [];
-    static persAdapter?: PersistenceAdapter;
+    static persistenceAdapter?: PersistenceAdapter;
+    static apiClient?: services.ApiClient;
     
     static launch(contextHandler: ContextHandler): Core;
     static launch(transitiveContext: true, requestHandler: RequestHandler): Core;
     static launch(transitiveContext: false, requestHandler: ContextHandler): Core;
     static launch(handlerOrTransContext: ContextHandler | boolean, handler?: ContextHandler | RequestHandler): Core {
-        return this.on(RequestType.LaunchRequest.get(), handlerOrTransContext, handler);
+        return this.on(RequestType.Launch.get(), handlerOrTransContext, handler);
     }
 
     static intent(contextHandler: ContextHandler): Core;
     static intent(transitiveContext: true, requestHandler: RequestHandler): Core;
     static intent(transitiveContext: false, requestHandler: ContextHandler): Core;
     static intent(handlerOrTransContext: ContextHandler | boolean, handler?: ContextHandler | RequestHandler): Core {
-        return this.on(RequestType.IntentRequest.get(), handlerOrTransContext, handler);
+        return this.on(RequestType.Intent.get(), handlerOrTransContext, handler);
     }
 
     static sessionEnded(contextHandler: ContextHandler): Core;
     static sessionEnded(transitiveContext: true, requestHandler: RequestHandler): Core;
     static sessionEnded(transitiveContext: false, requestHandler: ContextHandler): Core;
     static sessionEnded(handlerOrTransContext: ContextHandler | boolean, handler?: ContextHandler | RequestHandler): Core {
-        return this.on(RequestType.SessionEndedRequest.get(), handlerOrTransContext, handler);
+        return this.on(RequestType.SessionEnded.get(), handlerOrTransContext, handler);
     }
 
     static help(contextHandler: ContextHandler): Core;
@@ -93,11 +95,10 @@ export class Core {
             },
             handle: (handlerInput) => {
                 let data: Data = new Data(handlerInput);
-                let alexa: Alexa = new Alexa(handlerInput, data);
+                let response = improveResponseBuilder(handlerInput);
 
-                let response = context.getHandler().call(alexa, alexa, data);
-
-                return toRelative(response, () => alexa.getResponse());
+                let relative = context.getHandler().call(data, response, data);
+                return toRelative(relative, () => response.getResponse());
             }
         });
 
@@ -117,8 +118,13 @@ export class Core {
         return Core;
     }
 
-    static persistenceAdapter(persistenceAdapter: PersistenceAdapter): Core {
-        Core.persAdapter = persistenceAdapter;
+    static withPersistenceAdapter(persistenceAdapter: PersistenceAdapter): Core {
+        Core.persistenceAdapter = persistenceAdapter;
+        return Core;
+    }
+
+    static withApiClient(apiClient: services.ApiClient = new ASKCore.DefaultApiClient()): Core {
+        Core.apiClient = apiClient;
         return Core;
     }
 
@@ -126,4 +132,6 @@ export class Core {
         Core.userAgent = customUserAgent;
         return Core;
     }
+
+    
 }

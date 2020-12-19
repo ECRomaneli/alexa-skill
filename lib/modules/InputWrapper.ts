@@ -1,5 +1,5 @@
 import { AttributesManager, HandlerInput } from 'ask-sdk-core';
-import { Intent, Request, RequestEnvelope } from 'ask-sdk-model';
+import { Context, Intent, Request, RequestEnvelope, services, Session } from 'ask-sdk-model';
 
 export abstract class InputWrapper {
     protected handlerInput: HandlerInput;
@@ -14,6 +14,19 @@ export abstract class InputWrapper {
 
     public getRequestEnvelope(): RequestEnvelope {
         return this.handlerInput.requestEnvelope;
+    }
+
+    public getServiceClient(): services.ups.UpsServiceClient {
+        const clientFactory: services.ServiceClientFactory = this.handlerInput.serviceClientFactory;
+        return clientFactory ? this.handlerInput.serviceClientFactory.getUpsServiceClient() : void 0;
+    }
+
+    public getContext(): Context {
+        return this.getRequestEnvelope().context;
+    }
+
+    public getSession(): Session {
+        return this.getRequestEnvelope().session;
     }
 
     public getRequest(): Request {

@@ -27,6 +27,7 @@ class Context extends InputWrapper_1.InputWrapper {
         return this;
     }
     hasSlot(slotNames) {
+        slotNames = (slotNames instanceof Array) ? slotNames : [slotNames];
         return this.when(slotNames && slotNames.length ?
             (() => slotNames.every(slotName => this.data.hasSlot(slotName))) :
             (() => !Object_1.isEmptyObject(this.data.getSlots())));
