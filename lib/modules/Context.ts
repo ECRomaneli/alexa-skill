@@ -5,9 +5,9 @@ import { Data } from "./Data";
 import { InputWrapper } from "./InputWrapper";
 import { isEmptyObject } from "../utils/Object";
 import { Relative } from "../utils/Response";
-import { Alexa } from './Alexa';
+import { Response } from 'ask-sdk-model';
 
-export type RequestHandler = (alexa: Alexa, data?: Data) => Relative<void>;
+export type RequestHandler = (response: Response, data?: Data) => Relative<void>;
 type Condition = () => Relative<boolean>;
 type ContextRule = { status: RuleStatus, not?: boolean, conditions: Condition[], handler?: RequestHandler };
 
@@ -22,26 +22,27 @@ export class Context extends InputWrapper {
         return this;
     }
 
-    public hasSlot(slotNames?: string[]): this {
+    public hasSlot(slotNames?: string | string[]): this {
+        slotNames = (slotNames instanceof Array) ? slotNames : [slotNames];
         return this.when(slotNames && slotNames.length ?
-            (() => slotNames.every(slotName => this.data.hasSlot(slotName))) :
+            (() => (<string[]> slotNames).every(slotName => this.data.hasSlot(slotName))) :
             (() => !isEmptyObject(this.data.getSlots()))
         );
     }
 
-    public hasRequestAttr(attrNames?: string[]): this {
+    public hasRequestAttr(attrNames?: string | string[]): this {
         return this.hasAttr(AttributeType.REQUEST, attrNames);
     }
 
-    public hasSessionAttr(attrNames?: string[]): this {
+    public hasSessionAttr(attrNames?: string | string[]): this {
         return this.hasAttr(AttributeType.SESSION, attrNames);
     }
 
-    public hasPersistentAttr(attrNames?: string[]): this {
+    public hasPersistentAttr(attrNames?: string | string[]): this {
         return this.hasAttr(AttributeType.PERSISTENT, attrNames);
     }
 
-    public hasAttr(type: AttributeType, attrNames?: string[]): this {
+    public hasAttr(type: AttributeType, attrNames?: string | string[]): this {
         if (type === AttributeType.PERSISTENT) {
             this.async = true;
         }

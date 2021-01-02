@@ -1,5 +1,5 @@
 import { PersistenceAdapter, RequestHandler as ASKRequestHandler, RequestInterceptor, ResponseInterceptor } from "ask-sdk-core";
-import { Response as ASKResponse } from "ask-sdk-model";
+import { Response, services } from "ask-sdk-model";
 import { InterceptorType } from "../enums/InterceptorType";
 import { Relative } from "../utils/Response";
 import { Context, RequestHandler } from "./Context";
@@ -9,13 +9,14 @@ export declare type Selector = {
     intentName?: string;
 };
 declare type ContextHandler = (context?: Context) => void;
-declare type InterceptorHandler = (data: Data, response?: ASKResponse) => Relative<void>;
+declare type InterceptorHandler = (data: Data, response?: Response) => Relative<void>;
 export declare class Core {
     static userAgent: string;
     static handlers: ASKRequestHandler[];
     static requestInterceptors: RequestInterceptor[];
     static responseInterceptors: ResponseInterceptor[];
-    static persAdapter?: PersistenceAdapter;
+    static persistenceAdapter?: PersistenceAdapter;
+    static apiClient?: services.ApiClient;
     static launch(contextHandler: ContextHandler): Core;
     static launch(transitiveContext: true, requestHandler: RequestHandler): Core;
     static launch(transitiveContext: false, requestHandler: ContextHandler): Core;
@@ -39,7 +40,8 @@ export declare class Core {
     static on(selector: string | Selector, transitiveContext: false, requestHandler: ContextHandler): Core;
     static on(selector: string | Selector, handlerOrTransContext: ContextHandler | boolean, handler?: ContextHandler | RequestHandler): Core;
     static intercept(type: InterceptorType, handler: InterceptorHandler): Core;
-    static persistenceAdapter(persistenceAdapter: PersistenceAdapter): Core;
+    static withPersistenceAdapter(persistenceAdapter: PersistenceAdapter): Core;
+    static withApiClient(apiClient?: services.ApiClient): Core;
     static customUserAgent(customUserAgent: string): Core;
 }
 export {};

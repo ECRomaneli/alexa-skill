@@ -16,7 +16,7 @@ class RequestType {
         }
         let splitted = rawSelector.replace(/\s/g, '').split(':');
         return {
-            requestType: splitted.length > 1 ? splitted[1] : RequestType.IntentRequest.value,
+            requestType: splitted.length > 1 ? splitted[1] : RequestType.Intent.value,
             intentName: splitted[0].length ? splitted[0] : void 0
         };
     }
@@ -26,6 +26,6 @@ class RequestType {
 }
 exports.RequestType = RequestType;
 RequestType.AllValues = {};
-RequestType.LaunchRequest = new RequestType(1, 'LaunchRequest');
-RequestType.IntentRequest = new RequestType(2, 'IntentRequest');
-RequestType.SessionEndedRequest = new RequestType(3, 'SessionEndedRequest');
+RequestType.Launch = new RequestType(1, 'LaunchRequest');
+RequestType.Intent = new RequestType(2, 'IntentRequest');
+RequestType.SessionEnded = new RequestType(3, 'SessionEndedRequest');

@@ -11,6 +11,16 @@ class InputWrapper {
     getRequestEnvelope() {
         return this.handlerInput.requestEnvelope;
     }
+    getServiceClient() {
+        const clientFactory = this.handlerInput.serviceClientFactory;
+        return clientFactory ? this.handlerInput.serviceClientFactory.getUpsServiceClient() : void 0;
+    }
+    getContext() {
+        return this.getRequestEnvelope().context;
+    }
+    getSession() {
+        return this.getRequestEnvelope().session;
+    }
     getRequest() {
         return this.getRequestEnvelope().request;
     }

@@ -1,21 +1,22 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Core = void 0;
+const ASKCore = require("ask-sdk-core");
 const InterceptorType_1 = require("../enums/InterceptorType");
 const RequestType_1 = require("../enums/RequestType");
 const Response_1 = require("../utils/Response");
-const Alexa_1 = require("./Alexa");
 const Context_1 = require("./Context");
+const Response_2 = require("./Response");
 const Data_1 = require("./Data");
 class Core {
     static launch(handlerOrTransContext, handler) {
-        return this.on(RequestType_1.RequestType.LaunchRequest.get(), handlerOrTransContext, handler);
+        return this.on(RequestType_1.RequestType.Launch.get(), handlerOrTransContext, handler);
     }
     static intent(handlerOrTransContext, handler) {
-        return this.on(RequestType_1.RequestType.IntentRequest.get(), handlerOrTransContext, handler);
+        return this.on(RequestType_1.RequestType.Intent.get(), handlerOrTransContext, handler);
     }
     static sessionEnded(handlerOrTransContext, handler) {
-        return this.on(RequestType_1.RequestType.SessionEndedRequest.get(), handlerOrTransContext, handler);
+        return this.on(RequestType_1.RequestType.SessionEnded.get(), handlerOrTransContext, handler);
     }
     static help(handlerOrTransContext, handler) {
         return this.on('AMAZON.HelpIntent', handlerOrTransContext, handler);
@@ -49,9 +50,9 @@ class Core {
             },
             handle: (handlerInput) => {
                 let data = new Data_1.Data(handlerInput);
-                let alexa = new Alexa_1.Alexa(handlerInput, data);
-                let response = context.getHandler().call(alexa, alexa, data);
-                return Response_1.toRelative(response, () => alexa.getResponse());
+                let response = Response_2.improveResponseBuilder(handlerInput);
+                let relative = context.getHandler().call(data, response, data);
+                return Response_1.toRelative(relative, () => response.getResponse());
             }
         });
         return Core;
@@ -66,8 +67,12 @@ class Core {
         });
         return Core;
     }
-    static persistenceAdapter(persistenceAdapter) {
-        Core.persAdapter = persistenceAdapter;
+    static withPersistenceAdapter(persistenceAdapter) {
+        Core.persistenceAdapter = persistenceAdapter;
+        return Core;
+    }
+    static withApiClient(apiClient = new ASKCore.DefaultApiClient()) {
+        Core.apiClient = apiClient;
         return Core;
     }
     static customUserAgent(customUserAgent) {
